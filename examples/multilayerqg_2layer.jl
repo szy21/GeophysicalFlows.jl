@@ -18,6 +18,8 @@
 # ## Let's begin
 # Let's load `GeophysicalFlows.jl` and some other needed packages.
 #
+using NPZ
+
 using GeophysicalFlows, Plots, Printf
 
 using Random: seed!
@@ -124,88 +126,20 @@ end
 out = Output(prob, filename, (:sol, get_sol), (:u, get_u))
 nothing # hide
 
-
-# ## Visualizing the simulation
-
-# We define a function that plots the potential vorticity field and the evolution of energy 
-# and enstrophy. Note that when plotting, we decorate the variable to be plotted with `Array()` 
-# to make sure it is brought back on the CPU when `vars` live on the GPU.
-
-symlims(data) = maximum(abs.(extrema(data))) |> q -> (-q, q)
-
-function plot_output(prob)
-  Lx, Ly = prob.grid.Lx, prob.grid.Ly
-  
-  l = @layout Plots.grid(2, 3)
-  p = plot(layout=l, size = (1000, 600))
-  
-  for m in 1:nlayers
-    heatmap!(p[(m-1) * 3 + 1], x, y, Array(vars.q[:, :, m]'),
-         aspectratio = 1,
-              legend = false,
-                   c = :balance,
-               xlims = (-Lx/2, Lx/2),
-               ylims = (-Ly/2, Ly/2),
-               clims = symlims,
-              xticks = -3:3,
-              yticks = -3:3,
-              xlabel = "x",
-              ylabel = "y",
-               title = "q_"*string(m),
-          framestyle = :box)
-
-    contourf!(p[(m-1) * 3 + 2], x, y, Array(vars.ψ[:, :, m]'),
-              levels = 8,
-         aspectratio = 1,
-              legend = false,
-                   c = :viridis,
-               xlims = (-Lx/2, Lx/2),
-               ylims = (-Ly/2, Ly/2),
-               clims = symlims,
-              xticks = -3:3,
-              yticks = -3:3,
-              xlabel = "x",
-              ylabel = "y",
-               title = "ψ_"*string(m),
-          framestyle = :box)
-  end
-
-  plot!(p[3], 2,
-             label = ["KE₁" "KE₂"],
-            legend = :bottomright,
-         linewidth = 2,
-             alpha = 0.7,
-             xlims = (-0.1, 2.35),
-             ylims = (1e-9, 1e0),
-            yscale = :log10,
-            yticks = 10.0.^(-9:0),
-            xlabel = "μt")
-          
-  plot!(p[6], 1,
-             label = "PE",
-            legend = :bottomright,
-         linecolor = :red,
-         linewidth = 2,
-             alpha = 0.7,
-             xlims = (-0.1, 2.35),
-             ylims = (1e-9, 1e0),
-            yscale = :log10,
-            yticks = 10.0.^(-9:0),
-            xlabel = "μt")
-
-end
-nothing # hide
-
-
-# ## Time-stepping the `Problem` forward
-
-# Finally, we time-step the `Problem` forward in time.
-
-p = plot_output(prob)
-
 startwalltime = time()
 
-anim = @animate for j = 0:round(Int, nsteps / nsubs)
+u_data = zeros(round(Int, nsteps / nsubs)+1, n, n, nlayers)
+v_data = zeros(round(Int, nsteps / nsubs)+1, n, n, nlayers)
+q_data = zeros(round(Int, nsteps / nsubs)+1, n, n, nlayers)
+ψ_data = zeros(round(Int, nsteps / nsubs)+1, n, n, nlayers)
+
+for j = 0:round(Int, nsteps / nsubs)
+
+  u_data[j+1, :, :, :] = prob.vars.u
+  v_data[j+1, :, :, :] = prob.vars.v
+  q_data[j+1, :, :, :] = prob.vars.q
+  ψ_data[j+1, :, :, :] = prob.vars.ψ
+
   if j % (1000 / nsubs) == 0
     cfl = clock.dt * maximum([maximum(vars.u) / grid.dx, maximum(vars.v) / grid.dy])
     
@@ -214,21 +148,14 @@ anim = @animate for j = 0:round(Int, nsteps / nsubs)
     println(log)
   end
   
-  for m in 1:nlayers
-    p[(m-1) * 3 + 1][1][:z] = Array(vars.q[:, :, m])
-    p[(m-1) * 3 + 2][1][:z] = Array(vars.ψ[:, :, m])
-  end
-  
-  push!(p[3][1], μ * E.t[E.i], E.data[E.i][1][1])
-  push!(p[3][2], μ * E.t[E.i], E.data[E.i][1][2])
-  push!(p[6][1], μ * E.t[E.i], E.data[E.i][2][1])
-  
   stepforward!(prob, diags, nsubs)
-  MultiLayerQG.updatevars!(prob)
+  MultiLayerQG.updatevars!(prob) 
 end
 
-mp4(anim, "multilayerqg_2layer.mp4", fps=18)
-
+npzwrite("u_data.npy", u_data)
+npzwrite("v_data.npy", v_data)
+npzwrite("q_data.npy", q_data)
+npzwrite("psi_data.npy", ψ_data)
 
 # ## Save
 # Finally, we can save, e.g., the last snapshot via
