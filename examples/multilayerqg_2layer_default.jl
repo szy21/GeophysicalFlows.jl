@@ -35,9 +35,9 @@ nothing # hide
 
 n = 128                  # 2D resolution = n²
 stepper = "FilteredRK4"  # timestepper
-     dt = 5e-3           # timestep
- nsteps = 10000          # total number of time-steps
- nsubs  = 25             # number of time-steps for plotting (nsteps must be multiple of nsubs)
+     dt = 2.5e-3           # timestep
+ nsteps = 80000          # total number of time-steps
+ nsubs  = 50             # number of time-steps for plotting (nsteps must be multiple of nsubs)
 nothing # hide
 
 
@@ -45,6 +45,7 @@ nothing # hide
 L = 2π                   # domain size
 μ = 5e-2                 # bottom drag
 β = 5                    # the y-gradient of planetary PV
+ν = 0                 # hyperviscosity
  
 nlayers = 2              # number of layers
 f₀, g = 1, 1             # Coriolis parameter and gravitational constant
@@ -61,8 +62,8 @@ nothing # hide
 # We initialize a `Problem` by providing a set of keyword arguments. In this example we don't
 # do any dealiasing to our solution by providing `aliased_fraction=0`.
 prob = MultiLayerQG.Problem(nlayers, dev;
-                            nx=n, Lx=L, f₀=f₀, g=g, H=H, ρ=ρ, U=U, μ=μ, β=β,
-                            dt=dt, stepper=stepper, aliased_fraction=0)
+                            nx=n, Lx=L, f₀=f₀, g=g, H=H, ρ=ρ, U=U, μ=μ, β=β, ν=ν,
+			    dt=dt, stepper=stepper, aliased_fraction=0)
 nothing # hide
 
 # and define some shortcuts.
