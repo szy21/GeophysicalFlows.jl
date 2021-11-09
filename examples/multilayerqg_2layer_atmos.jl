@@ -35,26 +35,25 @@ nothing # hide
 
 n = 128                  # 2D resolution = n²
 stepper = "FilteredRK4"  # timestepper
-     dt = 2.5e-3           # timestep
- nsteps = 200000          # total number of time-steps
- nsubs  = 100             # number of time-steps for plotting (nsteps must be multiple of nsubs)
+     dt = 1800           # timestep
+ nsteps = 2*24*360*10          # total number of time-steps
+ nsubs  = 2*24*5             # number of time-steps for plotting (nsteps must be multiple of nsubs)
 nothing # hide
 
 
 # ## Physical parameters
-L = 2π                   # domain size
-μ = 5e-2                 # bottom drag
-β = 5                    # the y-gradient of planetary PV
-ν = 0                 # hyperviscosity
- 
+L = 12.8e6                   # domain size
+μ = 5e-6                 # bottom drag
+β = 1.5e-11                    # the y-gradient of planetary PV
+
 nlayers = 2              # number of layers
-f₀, g = 1, 1             # Coriolis parameter and gravitational constant
- H = [0.2, 0.8]          # the rest depths of each layer
- ρ = [4.0, 5.0]          # the density of each layer
- 
- U = zeros(nlayers) # the imposed mean zonal flow in each layer
- U[1] = 1.0
- U[2] = 0.0
+f₀, g = 1.0e-4, 10             # Coriolis parameter and gravitational constant
+H = [5000, 5000]          # the rest depths of each layer
+ρ = [0.9, 1.0]          # the density of each layer
+
+U = zeros(nlayers) # the imposed mean zonal flow in each layer
+U[1] = 10.0
+U[2] = 0.0
 nothing # hide
 
 
@@ -81,7 +80,7 @@ nothing # hide
 # `dev = CPU()` and `CuArray` for `dev = GPU()`.
 
 seed!(1234) # reset of the random number generator for reproducibility
-q₀  = 1e-2 * ArrayType(dev)(randn((grid.nx, grid.ny, nlayers)))
+q₀  = 1e-7 * ArrayType(dev)(randn((grid.nx, grid.ny, nlayers)))
 q₀h = prob.timestepper.filter .* rfft(q₀, (1, 2)) # apply rfft  only in dims=1, 2
 q₀  = irfft(q₀h, grid.nx, (1, 2))                 # apply irfft only in dims=1, 2
 
