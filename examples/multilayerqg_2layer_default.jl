@@ -58,12 +58,30 @@ f₀, g = 1, 1             # Coriolis parameter and gravitational constant
 nothing # hide
 
 
+gr = TwoDGrid(dev, n, L, n, L)
+x, y = gridpoints(gr)
+Q = 1.0
+T = eltype(gr)
+Ff1 =  @. Q*sin(y/L)
+Ff2 =  @. -Q*sin(y/L)
+Ffh = zeros(dev, Complex{T}, (gr.nkr, gr.nl, nlayers))
+@views Ffh[:, :, 1] = rfft(Ff1)
+@views Ffh[:, :, 2] = rfft(Ff2)
+
+
+function calcFq!(Fqh, sol, t, clock, vars, params, grid)
+  
+  Fqh .= Ffh
+
+  return nothing
+end
+
 # ## Problem setup
 # We initialize a `Problem` by providing a set of keyword arguments. In this example we don't
 # do any dealiasing to our solution by providing `aliased_fraction=0`.
 prob = MultiLayerQG.Problem(nlayers, dev;
                             nx=n, Lx=L, f₀=f₀, g=g, H=H, ρ=ρ, U=U, μ=μ, β=β, ν=ν,
-			    dt=dt, stepper=stepper, aliased_fraction=0)
+			    dt=dt, stepper=stepper, aliased_fraction=0, calcFq = calcFq!)
 nothing # hide
 
 # and define some shortcuts.
